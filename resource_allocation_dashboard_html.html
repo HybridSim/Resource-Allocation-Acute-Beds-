@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Resource Allocation Dashboard</title>
+  <style>
+    :root { --bg:#0b1020; --panel:#121a35; --ink:#e6eaf6; --muted:#94a3b8; --accent:#7c3aed; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    header{padding:28px 22px;border-bottom:1px solid #24335a;background:linear-gradient(180deg,#161f3f,transparent)}
+    h1{margin:0;font-size:24px;letter-spacing:.4px}
+    .wrap{display:grid;grid-template-columns:330px 1fr;gap:18px;align-items:start;padding:18px 18px 28px}
+    .card{background:var(--panel);border:1px solid #26345f;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .controls{padding:14px 14px 6px}
+    .group{padding:12px 12px 6px;border:1px solid #2b3b6e;border-radius:12px;margin-bottom:12px}
+    .group h3{margin:0 0 8px;font-size:14px;color:var(--muted);font-weight:600;letter-spacing:.2px}
+    .row{display:grid;grid-template-columns:1fr 70px;align-items:center;gap:10px;margin:8px 0}
+    .row label{font-size:13px;color:#c7d2fe}
+    input[type="range"]{width:100%}
+    .val{font-variant-numeric:tabular-nums;color:#cbd5e1;font-size:13px;text-align:right}
+    #stage{height:560px; width:100%;}
+    svg{width:100%; height:560px; display:block}
+    footer{color:var(--muted);text-align:center;font-size:12px;padding:10px}
+    @media (max-width: 900px){ .wrap{grid-template-columns:1fr} svg{height:500px} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Assessing Resource Allocation (2020–2031)</h1>
+  </header>
+  <div class="wrap">
+    <aside class="card">
+      <div class="controls">
+        <div class="group">
+          <h3>Reference Line</h3>
+          <div class="row">
+            <label for="ref">Reference (%)</label>
+            <div class="val"><span id="ref-val">50</span>%</div>
+          </div>
+          <input id="ref" type="range" min="0" max="100" value="50" step="1">
+        </div>
+        <div class="group" id="sliders"></div>
+      </div>
+    </aside>
+    <main class="card">
+      <div id="stage">
+        <svg id="chartSvg" viewBox="0 0 960 560" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </main>
+  </div>
+  <footer>No downloads. Use the sliders to adjust population and allocation.</footer>
+
+  <script>
+    // --- Configurable data ---
+    const counties = [
+      { name: 'Limerick', pop: 52.2, alloc: 85 },
+      { name: 'Clare',    pop: 31.9, alloc: 10 },
+      { name: 'Tipperary',pop: 15.9, alloc: 5  },
+    ];
+    const defaults = JSON.parse(JSON.stringify(counties));
+
+    // --- Build sliders ---
+    const container = document.getElementById('sliders');
+    function makeCountyControls(){
+      container.innerHTML = '';
+      counties.forEach((c, idx) => {
+        const block = document.createElement('div');
+        block.className = 'group';
+        block.innerHTML = `
+          <h3>${c.name}</h3>
+          <div class="row"><label>Population Proportion (%)</label><div class="val"><span id="pop-val-${idx}">${c.pop}</span>%</div></div>
+          <input id="pop-${idx}" type="range" min="0" max="100" step="0.1" value="${c.pop}">
+          <div class="row"><label>Resource Allocation (%)</label><div class="val"><span id="alloc-val-${idx}">${c.alloc}</span>%</div></div>
+          <input id="alloc-${idx}" type="range" min="0" max="100" step="0.1" value="${c.alloc}">
+        `;
+        container.appendChild(block);
+        ['pop','alloc'].forEach(type => {
+          const input = document.getElementById(`${type}-${idx}`);
+          input.addEventListener('input', e => {
+            const val = parseFloat(e.target.value);
+            counties[idx][type === 'pop' ? 'pop' : 'alloc'] = val;
+            document.getElementById(`${type}-val-${idx}`).textContent = val.toFixed( type==='pop' ? 1 : 0 );
+            draw();
+          });
+        });
+      });
+    }
+
+    // --- Simple SVG bar chart renderer (no external libs) ---
+    const svg = document.getElementById('chartSvg');
+    const PAD = {l:70,r:30,t:40,b:70};
+    const W = 960, H = 560;
+
+    function clearSVG(){
+      while(svg.firstChild) svg.removeChild(svg.firstChild);
+    }
+
+    function drawAxes(maxY){
+      // Y grid & ticks every 10
+      for(let y=0;y<=maxY;y+=10){
+        const yy = H-PAD.b - (y/maxY)*(H-PAD.t-PAD.b);
+        const grid = document.createElementNS('http://www.w3.org/2000/svg','line');
+        grid.setAttribute('x1', PAD.l); grid.setAttribute('x2', W-PAD.r);
+        grid.setAttribute('y1', yy); grid.setAttribute('y2', yy);
+        grid.setAttribute('stroke', '#223264'); grid.setAttribute('stroke-width','1');
+        grid.setAttribute('opacity', y%20===0 ? 1:0.4);
+        svg.appendChild(grid);
+
+        const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+        label.setAttribute('x', PAD.l-10); label.setAttribute('y', yy+4);
+        label.setAttribute('text-anchor','end'); label.setAttribute('fill','#e6eaf6');
+        label.setAttribute('font-size','12');
+        label.textContent = y;
+        svg.appendChild(label);
+      }
+
+      // Y title
+      const yt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      yt.setAttribute('x', 18); yt.setAttribute('y', PAD.t);
+      yt.setAttribute('fill','#cbd5e1'); yt.setAttribute('font-size','12');
+      yt.textContent = 'Percentage';
+      svg.appendChild(yt);
+    }
+
+    function draw(){
+      clearSVG();
+      const x = counties.map(c=>c.name);
+      const pop = counties.map(c=>c.pop);
+      const alloc = counties.map(c=>c.alloc);
+      const maxY = Math.max(100, ...pop, ...alloc);
+      drawAxes(maxY);
+
+      // reference line
+      const ref = parseFloat(document.getElementById('ref').value);
+      document.getElementById('ref-val').textContent = ref;
+      const yRef = H-PAD.b - (ref/maxY)*(H-PAD.t-PAD.b);
+      const refLine = document.createElementNS('http://www.w3.org/2000/svg','line');
+      refLine.setAttribute('x1', PAD.l-10); refLine.setAttribute('x2', W-PAD.r);
+      refLine.setAttribute('y1', yRef); refLine.setAttribute('y2', yRef);
+      refLine.setAttribute('stroke', '#b084fc'); refLine.setAttribute('stroke-dasharray','6,6'); refLine.setAttribute('stroke-width','2');
+      svg.appendChild(refLine);
+
+      // title
+      const title = document.createElementNS('http://www.w3.org/2000/svg','text');
+      title.setAttribute('x', (W/2)); title.setAttribute('y', 26);
+      title.setAttribute('text-anchor','middle'); title.setAttribute('fill','#e6eaf6');
+      title.setAttribute('font-size','16'); title.textContent = 'Resource Allocation vs. Population Proportion';
+      svg.appendChild(title);
+
+      // bars
+      const groups = x.length; const band = (W-PAD.l-PAD.r)/groups; const gap = 18;
+      const barW = (band - gap)/2;
+
+      x.forEach((name, i) => {
+        const x0 = PAD.l + i*band;
+        // alloc bar (left)
+        const hA = (alloc[i]/maxY)*(H-PAD.t-PAD.b);
+        const yA = H-PAD.b - hA;
+        const rectA = document.createElementNS('http://www.w3.org/2000/svg','rect');
+        rectA.setAttribute('x', x0 + gap/2);
+        rectA.setAttribute('y', yA);
+        rectA.setAttribute('width', barW);
+        rectA.setAttribute('height', hA);
+        rectA.setAttribute('fill', '#2dd4bf');
+        svg.appendChild(rectA);
+
+        // pop bar (right)
+        const hP = (pop[i]/maxY)*(H-PAD.t-PAD.b);
+        const yP = H-PAD.b - hP;
+        const rectP = document.createElementNS('http://www.w3.org/2000/svg','rect');
+        rectP.setAttribute('x', x0 + gap/2 + barW + 6);
+        rectP.setAttribute('y', yP);
+        rectP.setAttribute('width', barW);
+        rectP.setAttribute('height', hP);
+        rectP.setAttribute('fill', '#60a5fa');
+        svg.appendChild(rectP);
+
+        // x label
+        const xl = document.createElementNS('http://www.w3.org/2000/svg','text');
+        xl.setAttribute('x', x0 + band/2); xl.setAttribute('y', H-30);
+        xl.setAttribute('text-anchor','middle'); xl.setAttribute('fill','#e6eaf6'); xl.setAttribute('font-size','12');
+        xl.textContent = name; svg.appendChild(xl);
+
+        // annotations
+        const annA = document.createElementNS('http://www.w3.org/2000/svg','text');
+        annA.setAttribute('x', x0 + gap/2 + barW/2); annA.setAttribute('y', yA-6);
+        annA.setAttribute('text-anchor','middle'); annA.setAttribute('fill','#e6eaf6'); annA.setAttribute('font-size','12'); annA.textContent = Math.round(alloc[i]) + '%'; svg.appendChild(annA);
+
+        const annP = document.createElementNS('http://www.w3.org/2000/svg','text');
+        annP.setAttribute('x', x0 + gap/2 + barW + 6 + barW/2); annP.setAttribute('y', yP-6);
+        annP.setAttribute('text-anchor','middle'); annP.setAttribute('fill','#9fb3ff'); annP.setAttribute('font-size','11'); annP.textContent = pop[i].toFixed(1) + '%'; svg.appendChild(annP);
+      });
+
+      // legend
+      const legend = [ ['#2dd4bf','Resource Allocation (%)'], ['#60a5fa','Population Proportion (%)'] ];
+      legend.forEach((d, j)=>{
+        const gX = PAD.l + j*260; const gY = 48;
+        const box = document.createElementNS('http://www.w3.org/2000/svg','rect');
+        box.setAttribute('x', gX); box.setAttribute('y', gY-12); box.setAttribute('width', 14); box.setAttribute('height', 14); box.setAttribute('fill', d[0]); svg.appendChild(box);
+        const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+        txt.setAttribute('x', gX+22); txt.setAttribute('y', gY);
+        txt.setAttribute('fill','#e6eaf6'); txt.setAttribute('font-size','12'); txt.textContent = d[1]; svg.appendChild(txt);
+      });
+    }
+
+    // Reference line listener
+    document.getElementById('ref').addEventListener('input', draw);
+
+    // Initialize controls
+    makeCountyControls();
+    draw();
+  </script>
+</body>
+</html>
