@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+# Build a balanced version: changing any county's allocation redistributes across the others,
+# keeping the total at 100% (both directions). Compact UI retained.
+html = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -21,26 +23,26 @@
     }
     *{box-sizing:border-box}
     body{ margin:0; background:var(--bg); color:var(--ink); font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif }
-    header{ padding:24px 22px; border-bottom:1px solid var(--border); background:#ffffff; }
-    .title-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-    .title-logo{ height:44px; width:auto; }
-    h1{ margin:0; font-size:24px; letter-spacing:.3px; color:var(--navy); }
-    .wrap{ display:grid; grid-template-columns:330px 1fr; gap:18px; align-items:start; padding:18px 18px 28px }
-    .card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; box-shadow:0 6px 16px rgba(0,0,0,.06) }
-    .controls{padding:14px 14px 6px}
-    .group{ padding:12px 12px 10px; border:1px solid var(--border); border-radius:12px; margin-bottom:12px; background:#ffffff; }
-    .group h3{ margin:0 0 8px; font-size:14px; color:var(--muted); font-weight:600; letter-spacing:.2px }
-    .row{ display:grid; grid-template-columns:1fr 70px; align-items:center; gap:10px; margin:8px 0 }
-    .row label{font-size:13px;color:#1f2937}
-    input[type="range"]{width:100%}
-    .val{font-variant-numeric:tabular-nums;color:#334155;font-size:13px;text-align:right}
-    .btn{ background:var(--navy); color:#fff; border:1px solid var(--navy); padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer }
+    header{ padding:14px 14px; border-bottom:1px solid var(--border); background:#ffffff; }
+    .title-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .title-logo{ height:34px; width:auto; }
+    h1{ margin:0; font-size:18px; letter-spacing:.2px; color:var(--navy); line-height:1.2 }
+    .wrap{ display:grid; grid-template-columns:260px 1fr; gap:12px; align-items:start; padding:12px 12px 16px }
+    .card{ background:var(--panel); border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,.05) }
+    .controls{padding:10px}
+    .group{ padding:8px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; background:#ffffff; }
+    .group h3{ margin:0 0 6px; font-size:12px; color:var(--muted); font-weight:600; letter-spacing:.2px }
+    .row{ display:grid; grid-template-columns:1fr 56px; align-items:center; gap:6px; margin:6px 0 }
+    .row label{font-size:12px;color:#1f2937}
+    input[type="range"]{width:100%; height:18px}
+    .val{font-variant-numeric:tabular-nums;color:#334155;font-size:12px;text-align:right}
+    .btn{ background:var(--navy); color:#fff; border:1px solid var(--navy); padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer; font-size:12px }
     .btn:hover{ background:#172554 }
-    select{ padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:#fff; }
-    #stage{height:560px; width:100%;}
-    svg{width:100%; height:560px; display:block}
-    footer{color:var(--muted);text-align:center;font-size:12px;padding:10px}
-    @media (max-width: 900px){ .wrap{grid-template-columns:1fr} svg{height:500px} }
+    select{ padding:4px 6px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:12px; height:28px }
+    #stage{height:440px; width:100%;}
+    svg{width:100%; height:440px; display:block}
+    footer{color:var(--muted);text-align:center;font-size:11px;padding:8px}
+    @media (max-width: 900px){ .wrap{grid-template-columns:1fr} svg{height:420px} #stage{height:420px} }
   </style>
 </head>
 <body>
@@ -53,7 +55,7 @@
   <div class="wrap">
     <aside class="card">
       <div class="controls">
-        <div class="group" style="display:flex; gap:8px; justify-content:flex-end;">
+        <div class="group" style="display:flex; gap:6px; justify-content:flex-end;">
           <button class="btn" id="resetBtn">Reset to defaults</button>
         </div>
 
@@ -104,7 +106,7 @@
     </aside>
     <main class="card">
       <div id="stage">
-        <svg id="chartSvg" viewBox="0 0 960 560" preserveAspectRatio="xMidYMid meet"></svg>
+        <svg id="chartSvg" viewBox="0 0 960 440" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
     </main>
   </div>
@@ -136,38 +138,36 @@
     };
 
     const svg = document.getElementById('chartSvg');
-    const PAD = {l:80,r:30,t:40,b:70};
-    const W = 960, H = 560;
+    const PAD = {l:64,r:24,t:28,b:52};
+    const W = 960, H = 440;
 
     function clearSVG(){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
 
     function drawAxes(maxY){
-      // grid + ticks
       for(let y=0;y<=maxY;y+=10){
         const yy = H-PAD.b - (y/maxY)*(H-PAD.t-PAD.b);
         const grid = document.createElementNS('http://www.w3.org/2000/svg','line');
         grid.setAttribute('x1', PAD.l); grid.setAttribute('x2', W-PAD.r);
         grid.setAttribute('y1', yy); grid.setAttribute('y2', yy);
         grid.setAttribute('stroke', '#e5e7eb'); grid.setAttribute('stroke-width','1');
-        grid.setAttribute('opacity', y%20===0 ? 1:0.5);
+        grid.setAttribute('opacity', y%20===0 ? 1:0.45);
         svg.appendChild(grid);
 
         const label = document.createElementNS('http://www.w3.org/2000/svg','text');
-        label.setAttribute('x', PAD.l-10); label.setAttribute('y', yy+4);
+        label.setAttribute('x', PAD.l-8); label.setAttribute('y', yy+3);
         label.setAttribute('text-anchor','end'); label.setAttribute('fill','#111111');
-        label.setAttribute('font-size','12');
+        label.setAttribute('font-size','11');
         label.textContent = y;
         svg.appendChild(label);
       }
-      // vertical Y title at left, centered
       const midY = PAD.t + (H - PAD.t - PAD.b) / 2;
       const yTitle = document.createElementNS('http://www.w3.org/2000/svg','text');
-      yTitle.setAttribute('x', 28);
+      yTitle.setAttribute('x', 20);
       yTitle.setAttribute('y', midY);
       yTitle.setAttribute('fill', '#555555');
-      yTitle.setAttribute('font-size', '12');
+      yTitle.setAttribute('font-size', '11');
       yTitle.setAttribute('text-anchor', 'middle');
-      yTitle.setAttribute('transform', `rotate(-90 28 ${midY})`);
+      yTitle.setAttribute('transform', `rotate(-90 20 ${midY})`);
       yTitle.textContent = 'Percentage';
       svg.appendChild(yTitle);
     }
@@ -199,50 +199,45 @@
       const maxY = Math.max(100, ...pop, ...alloc);
       drawAxes(maxY);
 
-      // reference line
       const ref = parseFloat(document.getElementById('ref').value);
       document.getElementById('ref-val').textContent = ref.toFixed(1);
       const yRef = H-PAD.b - (ref/maxY)*(H-PAD.t-PAD.b);
       const refLine = document.createElementNS('http://www.w3.org/2000/svg','line');
-      refLine.setAttribute('x1', PAD.l-10); refLine.setAttribute('x2', W-PAD.r);
+      refLine.setAttribute('x1', PAD.l-8); refLine.setAttribute('x2', W-PAD.r);
       refLine.setAttribute('y1', yRef); refLine.setAttribute('y2', yRef);
       refLine.setAttribute('stroke', '#0d9488'); refLine.setAttribute('stroke-dasharray','6,6'); refLine.setAttribute('stroke-width','2');
       svg.appendChild(refLine);
 
-      // title
       const title = document.createElementNS('http://www.w3.org/2000/svg','text');
-      title.setAttribute('x', (W/2)); title.setAttribute('y', 26);
+      title.setAttribute('x', (W/2)); title.setAttribute('y', 22);
       title.setAttribute('text-anchor','middle'); title.setAttribute('fill','#111111');
-      title.setAttribute('font-size','16'); title.textContent = 'Resource Allocation vs. Population Proportion';
+      title.setAttribute('font-size','14'); title.textContent = 'Resource Allocation vs. Population Proportion';
       svg.appendChild(title);
 
-      // legend
       const mode = gapModeSelect.value;
       const legendItems = [
         ['#0ea5a8','Resource Allocation (%)'],
         ['#60a5fa','Population Proportion (%)'],
         ...(mode==='parity' ? [['#16a34a','Surplus vs parity (+)'], ['#dc2626','Shortfall vs parity (–)']] : [['#16a34a','Surplus vs baseline (+)'], ['#dc2626','Shortfall vs baseline (–)']])
       ];
-      const legendY = PAD.t + 16;
-      const startX = W - PAD.r - 520;
+      const legendY = PAD.t + 12;
+      const startX = W - PAD.r - 480;
       legendItems.forEach((d, j)=>{
-        const gX = startX + (j%2)*260;
-        const gY = legendY + Math.floor(j/2)*20;
+        const gX = startX + (j%2)*240;
+        const gY = legendY + Math.floor(j/2)*18;
         const box = document.createElementNS('http://www.w3.org/2000/svg','rect');
-        box.setAttribute('x', gX); box.setAttribute('y', gY-12);
-        box.setAttribute('width', 14); box.setAttribute('height', 14); box.setAttribute('fill', d[0]); svg.appendChild(box);
+        box.setAttribute('x', gX); box.setAttribute('y', gY-10);
+        box.setAttribute('width', 12); box.setAttribute('height', 12); box.setAttribute('fill', d[0]); svg.appendChild(box);
         const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
-        txt.setAttribute('x', gX+22); txt.setAttribute('y', gY);
-        txt.setAttribute('fill','#111111'); txt.setAttribute('font-size','12'); txt.textContent = d[1]; svg.appendChild(txt);
+        txt.setAttribute('x', gX+18); txt.setAttribute('y', gY);
+        txt.setAttribute('fill','#111111'); txt.setAttribute('font-size','11'); txt.textContent = d[1]; svg.appendChild(txt);
       });
 
-      // bars
-      const groups = NAMES.length; const band = (W-PAD.l-PAD.r)/groups; const gap = 18;
+      const groups = NAMES.length; const band = (W-PAD.l-PAD.r)/groups; const gap = 14;
       const barW = (band - gap)/2;
 
       NAMES.forEach((name, i) => {
         const x0 = PAD.l + i*band;
-        // alloc bar (left)
         const hA = (alloc[i]/maxY)*(H-PAD.t-PAD.b);
         const yA = H-PAD.b - hA;
         const rectA = document.createElementNS('http://www.w3.org/2000/svg','rect');
@@ -253,67 +248,60 @@
         rectA.setAttribute('fill', '#0ea5a8');
         svg.appendChild(rectA);
 
-        // pop bar (right)
         const hP = (pop[i]/maxY)*(H-PAD.t-PAD.b);
         const yP = H-PAD.b - hP;
         const rectP = document.createElementNS('http://www.w3.org/2000/svg','rect');
-        rectP.setAttribute('x', x0 + gap/2 + barW + 6);
+        rectP.setAttribute('x', x0 + gap/2 + barW + 5);
         rectP.setAttribute('y', yP);
         rectP.setAttribute('width', barW);
         rectP.setAttribute('height', hP);
         rectP.setAttribute('fill', '#60a5fa');
         svg.appendChild(rectP);
 
-        // x label
         const xl = document.createElementNS('http://www.w3.org/2000/svg','text');
-        xl.setAttribute('x', x0 + band/2); xl.setAttribute('y', H-30);
-        xl.setAttribute('text-anchor','middle'); xl.setAttribute('fill','#111111'); xl.setAttribute('font-size','12');
+        xl.setAttribute('x', x0 + band/2); xl.setAttribute('y', H-26);
+        xl.setAttribute('text-anchor','middle'); xl.setAttribute('fill','#111111'); xl.setAttribute('font-size','11');
         xl.textContent = name; svg.appendChild(xl);
 
-        // planned beds (annotation on allocation bar)
         const plannedBeds = scaleBeds(name, alloc[i]);
         const annA = document.createElementNS('http://www.w3.org/2000/svg','text');
         annA.setAttribute('x', x0 + gap/2 + barW/2);
-        annA.setAttribute('y', yA-6);
+        annA.setAttribute('y', yA-5);
         annA.setAttribute('text-anchor','middle');
         annA.setAttribute('fill','#111111');
-        annA.setAttribute('font-size','11');
+        annA.setAttribute('font-size','10');
         if(plannedBeds.parts.length){
-          annA.textContent = Math.round(alloc[i]) + '% (' + plannedBeds.parts.join('+') + ' = ' + plannedBeds.total + ' beds)';
+          annA.textContent = Math.round(alloc[i]) + '% (' + plannedBeds.parts.join('+') + '=' + plannedBeds.total + ' beds)';
         } else {
           annA.textContent = Math.round(alloc[i]) + '% (' + plannedBeds.total + ' beds)';
         }
         svg.appendChild(annA);
 
-        // population annotation
         const annP = document.createElementNS('http://www.w3.org/2000/svg','text');
-        annP.setAttribute('x', x0 + gap/2 + barW + 6 + barW/2);
-        annP.setAttribute('y', yP-6);
+        annP.setAttribute('x', x0 + gap/2 + barW + 5 + barW/2);
+        annP.setAttribute('y', yP-5);
         annP.setAttribute('text-anchor','middle');
         annP.setAttribute('fill','#1f2937');
-        annP.setAttribute('font-size','11');
+        annP.setAttribute('font-size','10');
         annP.textContent = pop[i].toFixed(1) + '%';
         svg.appendChild(annP);
 
-        // Gap visual
         const colorize = (val) => (val < 0 ? '#dc2626' : (val > 0 ? '#16a34a' : '#6b7280'));
 
         if (mode === 'parity') {
-          // bracket between bar tops + label with % gap and bed equivalent difference
           const midLeft  = x0 + gap/2 + barW/2;
-          const midRight = x0 + gap/2 + barW + 6 + barW/2;
-          const yBracket = Math.min(yA, yP) - 14;
+          const midRight = x0 + gap/2 + barW + 5 + barW/2;
+          const yBracket = Math.min(yA, yP) - 12;
           const gapPct = alloc[i] - pop[i];
           const parityBeds = scaleBeds(name, pop[i]);
-          const bedDiff = parityBeds.total - plannedBeds.total; // + means shortfall
+          const bedDiff = parityBeds.total - plannedBeds.total;
 
           const color = colorize(gapPct);
-          // ticks
           ['L','R'].forEach(side=>{
             const tick = document.createElementNS('http://www.w3.org/2000/svg','line');
             const x = side==='L' ? midLeft : midRight;
             tick.setAttribute('x1', x); tick.setAttribute('x2', x);
-            tick.setAttribute('y1', yBracket); tick.setAttribute('y2', yBracket+8);
+            tick.setAttribute('y1', yBracket); tick.setAttribute('y2', yBracket+7);
             tick.setAttribute('stroke', color); tick.setAttribute('stroke-width','2');
             svg.appendChild(tick);
           });
@@ -325,20 +313,19 @@
 
           const label = document.createElementNS('http://www.w3.org/2000/svg','text');
           label.setAttribute('x', (midLeft+midRight)/2); label.setAttribute('y', yBracket-4);
-          label.setAttribute('text-anchor','middle'); label.setAttribute('fill', color); label.setAttribute('font-size','11');
+          label.setAttribute('text-anchor','middle'); label.setAttribute('fill', color); label.setAttribute('font-size','10');
           const pctTxt = (gapPct===0)? 'Parity' : (gapPct < 0 ? `Shortfall ${Math.abs(gapPct).toFixed(1)}%` : `Surplus +${gapPct.toFixed(1)}%`);
           const bedTxt = (gapPct===0)? '' : ` (≈ ${Math.abs(bedDiff)} beds)`;
           label.textContent = pctTxt + bedTxt;
           svg.appendChild(label);
         } else {
-          // baseline mode: label only (no bracket), computed as planned - current beds
           const baseBeds = baseline[name].beds;
           const bedDiffBase = plannedBeds.total - baseBeds;
           const color = colorize(bedDiffBase);
           const label = document.createElementNS('http://www.w3.org/2000/svg','text');
           label.setAttribute('x', x0 + gap/2 + barW/2);
-          label.setAttribute('y', yA - 22);
-          label.setAttribute('text-anchor','middle'); label.setAttribute('fill', color); label.setAttribute('font-size','11');
+          label.setAttribute('y', yA - 18);
+          label.setAttribute('text-anchor','middle'); label.setAttribute('fill', color); label.setAttribute('font-size','10');
           if (bedDiffBase === 0) {
             label.textContent = `= ${baseBeds} beds (current)`;
           } else if (bedDiffBase > 0) {
@@ -351,23 +338,136 @@
       });
     }
 
-    // Listeners
+    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+    // Track last allocations for all 3
+    let lastAlloc = [
+      parseFloat(document.getElementById('alloc-0').value),
+      parseFloat(document.getElementById('alloc-1').value),
+      parseFloat(document.getElementById('alloc-2').value)
+    ];
+
+    function populations(){
+      return popInputs.map(el => parseFloat(el.value));
+    }
+
+    function redistribute(indexChanged, newVal){
+      const cur = allocInputs.map(el => parseFloat(el.value));
+      const olds = lastAlloc.slice();
+      const delta = newVal - olds[indexChanged]; // + means we need to remove from others, - means add to others
+      if (Math.abs(delta) < 1e-9) return;
+
+      const idxOthers = [0,1,2].filter(i => i !== indexChanged);
+      const pops = populations();
+
+      // helper iterative distribute function
+      function distribute(amount, mode){ // mode: 'add' to others, 'remove' from others
+        let remaining = Math.abs(amount);
+        let active = idxOthers.slice();
+        let weights = {};
+        active.forEach(i => { weights[i] = pops[i]; });
+        // default equal weights if sum zero or invalid
+        function sumWeights(indices){
+          let s = indices.reduce((a,i)=> a + (isFinite(weights[i]) && weights[i] > 0 ? weights[i] : 0), 0);
+          if (s <= 0) {
+            // fallback equal weights
+            indices.forEach(i => { weights[i] = 1; });
+            s = indices.length;
+          }
+          return s;
+        }
+
+        while (remaining > 1e-6 && active.length){
+          const sumW = sumWeights(active);
+          let newActive = [];
+          for (const i of active){
+            const w = weights[i];
+            const share = remaining * (w / sumW);
+            let cap, deltaApplied;
+            if (mode === 'add'){
+              cap = 100 - cur[i];
+              deltaApplied = Math.min(share, cap);
+              cur[i] = clamp(cur[i] + deltaApplied, 0, 100);
+            } else {
+              cap = cur[i]; // how much we can remove
+              deltaApplied = Math.min(share, cap);
+              cur[i] = clamp(cur[i] - deltaApplied, 0, 100);
+            }
+            remaining -= deltaApplied;
+            // if still capacity left, keep active
+            const stillCap = (mode === 'add') ? ( (100 - cur[i]) > 1e-6 ) : ( cur[i] > 1e-6 );
+            if (stillCap) newActive.push(i);
+          }
+          active = newActive;
+        }
+        return remaining; // leftover that couldn't be placed
+      }
+
+      if (delta < 0){
+        // decreased changed slider -> add to others
+        const leftover = distribute(delta, 'add'); // delta negative
+        if (leftover < -1e-6){
+          // couldn't add all; undo part of decrease
+          const undone = -leftover;
+          newVal += undone;
+        }
+      } else {
+        // increased changed slider -> remove from others
+        const leftover = distribute(delta, 'remove');
+        if (leftover > 1e-6){
+          // couldn't remove enough; reduce increase
+          newVal -= leftover;
+        }
+      }
+
+      // Apply the final value to the changed slider
+      cur[indexChanged] = clamp(newVal, 0, 100);
+
+      // Normalize minor floating error to keep sum ~ 100
+      const total = cur[0] + cur[1] + cur[2];
+      if (Math.abs(total - 100) > 0.01){
+        // push tiny rounding diff into the largest bucket to sum exactly 100
+        const maxIdx = cur.indexOf(Math.max(...cur));
+        cur[maxIdx] += (100 - total);
+      }
+
+      // Write back to sliders and readouts
+      for (let i=0;i<3;i++){
+        allocInputs[i].value = cur[i];
+        allocVals[i].textContent = Math.round(cur[i]);
+        lastAlloc[i] = cur[i];
+      }
+    }
+
     document.getElementById('ref').addEventListener('input', () => { 
       const v = parseFloat(document.getElementById('ref').value);
       document.getElementById('ref-val').textContent = v.toFixed(1);
       draw(); 
     });
-    popInputs.forEach((el, i) => el.addEventListener('input', () => { popVals[i].textContent = parseFloat(el.value).toFixed(1); draw(); }));
-    allocInputs.forEach((el, i) => el.addEventListener('input', () => { allocVals[i].textContent = Math.round(parseFloat(el.value)); draw(); }));
+
+    popInputs.forEach((el, i) => el.addEventListener('input', () => { 
+      popVals[i].textContent = parseFloat(el.value).toFixed(1); 
+      draw(); 
+    }));
+
+    // Hook all three allocation sliders with balancing redistribution
+    [0,1,2].forEach(i => {
+      allocInputs[i].addEventListener('input', () => {
+        const newVal = parseFloat(allocInputs[i].value);
+        redistribute(i, newVal);
+        draw();
+      });
+    });
+
     gapModeSelect.addEventListener('change', draw);
 
-    // Reset
     document.getElementById('resetBtn').addEventListener('click', () => {
       document.getElementById('ref').value = defaults.ref;
       document.getElementById('ref-val').textContent = defaults.ref.toFixed(1);
       gapModeSelect.value = defaults.gapMode;
       popInputs.forEach((el, i) => { el.value = defaults.pops[i]; popVals[i].textContent = defaults.pops[i].toFixed(1); });
       allocInputs.forEach((el, i) => { el.value = defaults.allocs[i]; allocVals[i].textContent = Math.round(defaults.allocs[i]); });
+      lastAlloc = defaults.allocs.slice();
       draw();
     });
 
@@ -376,5 +476,10 @@
   </script>
 </body>
 </html>
+"""
+with open('/mnt/data/midcare_dashboard_balanced.html','w',encoding='utf-8') as f:
+    f.write(html)
+print("Saved to /mnt/data/midcare_dashboard_balanced.html")
+
 
 
