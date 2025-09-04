@@ -21,26 +21,26 @@
     }
     *{box-sizing:border-box}
     body{ margin:0; background:var(--bg); color:var(--ink); font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif }
-    header{ padding:14px 14px; border-bottom:1px solid var(--border); background:#ffffff; }
+    header{ padding:14px; border-bottom:1px solid var(--border); background:#ffffff; }
     .title-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .title-logo{ height:34px; width:auto; }
     h1{ margin:0; font-size:18px; letter-spacing:.2px; color:var(--navy); line-height:1.2 }
-    .wrap{ display:grid; grid-template-columns:260px 1fr; gap:12px; align-items:start; padding:12px 12px 16px }
+    .wrap{ display:flex; flex-direction:column; gap:12px; padding:12px }
     .card{ background:var(--panel); border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,.05) }
-    .controls{padding:10px}
-    .group{ padding:8px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; background:#ffffff; }
+    .controls{padding:10px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; align-items:end}
+    .group{ padding:8px; border:1px solid var(--border); border-radius:10px; background:#ffffff; }
     .group h3{ margin:0 0 6px; font-size:12px; color:var(--muted); font-weight:600; letter-spacing:.2px }
-    .row{ display:grid; grid-template-columns:1fr 56px; align-items:center; gap:6px; margin:6px 0 }
-    .row label{font-size:12px;color:#1f2937}
-    input[type="range"]{width:100%; height:18px}
-    .val{font-variant-numeric:tabular-nums;color:#334155;font-size:12px;text-align:right}
+    .row{ display:flex; justify-content:space-between; align-items:center; margin:4px 0 }
+    .row label{font-size:12px;color:#1f2937; flex:1}
+    input[type="range"]{width:100%; height:14px}
+    .val{font-variant-numeric:tabular-nums;color:#334155;font-size:12px;text-align:right; min-width:40px}
     .btn{ background:var(--navy); color:#fff; border:1px solid var(--navy); padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer; font-size:12px }
     .btn:hover{ background:#172554 }
-    select{ padding:4px 6px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:12px; height:28px }
+    select{ padding:4px 6px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:12px; height:28px; width:100% }
     #stage{height:440px; width:100%;}
     svg{width:100%; height:440px; display:block}
     footer{color:var(--muted);text-align:center;font-size:11px;padding:8px}
-    @media (max-width: 900px){ .wrap{grid-template-columns:1fr} svg{height:420px} #stage{height:420px} }
+    @media (max-width: 700px){ .controls{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
@@ -51,57 +51,56 @@
     </div>
   </header>
   <div class="wrap">
-    <aside class="card">
-      <div class="controls">
-        <div class="group" style="display:flex; gap:6px; justify-content:flex-end;">
-          <button class="btn" id="resetBtn">Reset to defaults</button>
-        </div>
+    <div class="card controls">
+      <div class="group">
+        <button class="btn" id="resetBtn">Reset to defaults</button>
+      </div>
 
-        <div class="group">
-          <h3>Gap mode</h3>
-          <div class="row" style="grid-template-columns:1fr;">
-            <label for="gapMode">How should we measure the gap?</label>
-            <select id="gapMode">
-              <option value="baseline" selected>Baseline stock (planned vs current beds)</option>
-              <option value="parity">Parity (allocation vs population)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="group">
-          <h3>Reference Line</h3>
-          <div class="row">
-            <label for="ref">Reference (%)</label>
-            <div class="val"><span id="ref-val">52.2</span>%</div>
-          </div>
-          <input id="ref" type="range" min="0" max="100" value="52.2" step="0.1">
-        </div>
-
-        <div class="group">
-          <h3>Limerick</h3>
-          <div class="row"><label>Population Proportion (%)</label><div class="val"><span id="pop-val-0">52.2</span>%</div></div>
-          <input id="pop-0" type="range" min="0" max="100" step="0.1" value="52.2">
-          <div class="row"><label>Resource Allocation (%)</label><div class="val"><span id="alloc-val-0">85</span>%</div></div>
-          <input id="alloc-0" type="range" min="0" max="100" step="0.1" value="85">
-        </div>
-
-        <div class="group">
-          <h3>Clare</h3>
-          <div class="row"><label>Population Proportion (%)</label><div class="val"><span id="pop-val-1">31.9</span>%</div></div>
-          <input id="pop-1" type="range" min="0" max="100" step="0.1" value="31.9">
-          <div class="row"><label>Resource Allocation (%)</label><div class="val"><span id="alloc-val-1">10</span>%</div></div>
-          <input id="alloc-1" type="range" min="0" max="100" step="0.1" value="10">
-        </div>
-
-        <div class="group">
-          <h3>North Tipperary</h3>
-          <div class="row"><label>Population Proportion (%)</label><div class="val"><span id="pop-val-2">15.9</span>%</div></div>
-          <input id="pop-2" type="range" min="0" max="100" step="0.1" value="15.9">
-          <div class="row"><label>Resource Allocation (%)</label><div class="val"><span id="alloc-val-2">5</span>%</div></div>
-          <input id="alloc-2" type="range" min="0" max="100" step="0.1" value="5">
+      <div class="group">
+        <h3>Gap mode</h3>
+        <div class="row">
+          <label for="gapMode">Gap measure</label>
+          <select id="gapMode">
+            <option value="baseline" selected>Baseline stock</option>
+            <option value="parity">Parity (allocation vs population)</option>
+          </select>
         </div>
       </div>
-    </aside>
+
+      <div class="group">
+        <h3>Reference Line</h3>
+        <div class="row">
+          <label for="ref">Reference (%)</label>
+          <div class="val"><span id="ref-val">52.2</span>%</div>
+        </div>
+        <input id="ref" type="range" min="0" max="100" value="52.2" step="0.1">
+      </div>
+
+      <div class="group">
+        <h3>Limerick</h3>
+        <div class="row"><label>Pop. (%)</label><div class="val"><span id="pop-val-0">52.2</span>%</div></div>
+        <input id="pop-0" type="range" min="0" max="100" step="0.1" value="52.2">
+        <div class="row"><label>Alloc. (%)</label><div class="val"><span id="alloc-val-0">85</span>%</div></div>
+        <input id="alloc-0" type="range" min="0" max="100" step="0.1" value="85">
+      </div>
+
+      <div class="group">
+        <h3>Clare</h3>
+        <div class="row"><label>Pop. (%)</label><div class="val"><span id="pop-val-1">31.9</span>%</div></div>
+        <input id="pop-1" type="range" min="0" max="100" step="0.1" value="31.9">
+        <div class="row"><label>Alloc. (%)</label><div class="val"><span id="alloc-val-1">10</span>%</div></div>
+        <input id="alloc-1" type="range" min="0" max="100" step="0.1" value="10">
+      </div>
+
+      <div class="group">
+        <h3>North Tipperary</h3>
+        <div class="row"><label>Pop. (%)</label><div class="val"><span id="pop-val-2">15.9</span>%</div></div>
+        <input id="pop-2" type="range" min="0" max="100" step="0.1" value="15.9">
+        <div class="row"><label>Alloc. (%)</label><div class="val"><span id="alloc-val-2">5</span>%</div></div>
+        <input id="alloc-2" type="range" min="0" max="100" step="0.1" value="5">
+      </div>
+    </div>
+
     <main class="card">
       <div id="stage">
         <svg id="chartSvg" viewBox="0 0 960 440" preserveAspectRatio="xMidYMid meet"></svg>
@@ -128,9 +127,8 @@
       gapMode: 'baseline'
     };
 
-    // Baselines used to convert allocation % -> bed counts
     const baseline = {
-      'Limerick':        { pct: 85, beds: 310, parts: [184,84,42] },   // 310 total = 184+84+42
+      'Limerick':        { pct: 85, beds: 310, parts: [184,84,42] },
       'Clare':           { pct: 10, beds: 48 },
       'North Tipperary': { pct:  5, beds: 24 }
     };
@@ -338,7 +336,6 @@
 
     const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
-    // Track last allocations for all 3
     let lastAlloc = [
       parseFloat(document.getElementById('alloc-0').value),
       parseFloat(document.getElementById('alloc-1').value),
@@ -352,84 +349,66 @@
     function redistribute(indexChanged, newVal){
       const cur = allocInputs.map(el => parseFloat(el.value));
       const olds = lastAlloc.slice();
-      const delta = newVal - olds[indexChanged]; // + means we need to remove from others, - means add to others
+      let delta = newVal - olds[indexChanged]; // + increase, - decrease
       if (Math.abs(delta) < 1e-9) return;
 
       const idxOthers = [0,1,2].filter(i => i !== indexChanged);
       const pops = populations();
 
-      // helper iterative distribute function
-      function distribute(amount, mode){ // mode: 'add' to others, 'remove' from others
+      function distribute(amount, mode){
         let remaining = Math.abs(amount);
         let active = idxOthers.slice();
         let weights = {};
         active.forEach(i => { weights[i] = pops[i]; });
-        // default equal weights if sum zero or invalid
         function sumWeights(indices){
           let s = indices.reduce((a,i)=> a + (isFinite(weights[i]) && weights[i] > 0 ? weights[i] : 0), 0);
           if (s <= 0) {
-            // fallback equal weights
             indices.forEach(i => { weights[i] = 1; });
             s = indices.length;
           }
           return s;
         }
-
         while (remaining > 1e-6 && active.length){
           const sumW = sumWeights(active);
           let newActive = [];
           for (const i of active){
             const w = weights[i];
             const share = remaining * (w / sumW);
-            let cap, deltaApplied;
+            let cap, applied;
             if (mode === 'add'){
               cap = 100 - cur[i];
-              deltaApplied = Math.min(share, cap);
-              cur[i] = clamp(cur[i] + deltaApplied, 0, 100);
+              applied = Math.min(share, cap);
+              cur[i] = clamp(cur[i] + applied, 0, 100);
             } else {
-              cap = cur[i]; // how much we can remove
-              deltaApplied = Math.min(share, cap);
-              cur[i] = clamp(cur[i] - deltaApplied, 0, 100);
+              cap = cur[i];
+              applied = Math.min(share, cap);
+              cur[i] = clamp(cur[i] - applied, 0, 100);
             }
-            remaining -= deltaApplied;
-            // if still capacity left, keep active
+            remaining -= applied;
             const stillCap = (mode === 'add') ? ( (100 - cur[i]) > 1e-6 ) : ( cur[i] > 1e-6 );
             if (stillCap) newActive.push(i);
           }
           active = newActive;
         }
-        return remaining; // leftover that couldn't be placed
+        return remaining;
       }
 
       if (delta < 0){
-        // decreased changed slider -> add to others
-        const leftover = distribute(delta, 'add'); // delta negative
-        if (leftover < -1e-6){
-          // couldn't add all; undo part of decrease
-          const undone = -leftover;
-          newVal += undone;
-        }
+        const leftover = distribute(delta, 'add');
+        if (leftover < -1e-6) newVal += -leftover;
       } else {
-        // increased changed slider -> remove from others
         const leftover = distribute(delta, 'remove');
-        if (leftover > 1e-6){
-          // couldn't remove enough; reduce increase
-          newVal -= leftover;
-        }
+        if (leftover > 1e-6) newVal -= leftover;
       }
 
-      // Apply the final value to the changed slider
       cur[indexChanged] = clamp(newVal, 0, 100);
 
-      // Normalize minor floating error to keep sum ~ 100
       const total = cur[0] + cur[1] + cur[2];
       if (Math.abs(total - 100) > 0.01){
-        // push tiny rounding diff into the largest bucket to sum exactly 100
         const maxIdx = cur.indexOf(Math.max(...cur));
         cur[maxIdx] += (100 - total);
       }
 
-      // Write back to sliders and readouts
       for (let i=0;i<3;i++){
         allocInputs[i].value = cur[i];
         allocVals[i].textContent = Math.round(cur[i]);
@@ -448,7 +427,6 @@
       draw(); 
     }));
 
-    // Hook all three allocation sliders with balancing redistribution
     [0,1,2].forEach(i => {
       allocInputs[i].addEventListener('input', () => {
         const newVal = parseFloat(allocInputs[i].value);
@@ -469,11 +447,12 @@
       draw();
     });
 
-    // Initial draw
     draw();
   </script>
 </body>
 </html>
+
+
 
 
 
