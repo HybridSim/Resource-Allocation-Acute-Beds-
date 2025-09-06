@@ -15,9 +15,6 @@
       --navy:#1e3a8a;
       --blue:#60a5fa;
       --teal:#0ea5a8;
-      --surplus:#16a34a;
-      --shortfall:#dc2626;
-      --gray:#6b7280;
     }
     *{box-sizing:border-box}
     body{ margin:0; background:var(--bg); color:var(--ink); font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif }
@@ -32,7 +29,7 @@
     .group h3{ margin:0 0 6px; font-size:12px; color:var(--muted); font-weight:600; letter-spacing:.2px }
     .row{ display:flex; justify-content:space-between; align-items:center; margin:4px 0 }
     .row label{font-size:12px;color:#1f2937; flex:1}
-    input[type="range"]{width:100%; height:14px}
+    input[type="range"]{width:100%; height:14px; touch-action:none}
     .val{font-variant-numeric:tabular-nums;color:#334155;font-size:12px;text-align:right; min-width:40px}
     .btn{ background:var(--navy); color:#fff; border:1px solid var(--navy); padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer; font-size:12px }
     .btn:hover{ background:#172554 }
@@ -119,6 +116,9 @@
     const popVals = [ 'pop-val-0','pop-val-1','pop-val-2' ].map(id => document.getElementById(id));
     const allocVals = [ 'alloc-val-0','alloc-val-1','alloc-val-2' ].map(id => document.getElementById(id));
     const gapModeSelect = document.getElementById('gapMode');
+
+    // Ensure ALL allocation sliders are free 0–100 (attributes + runtime guards)
+    allocInputs.forEach(el => { el.min = '0'; el.max = '100'; el.step='0.1'; el.addEventListener('focus',()=>{el.min='0';el.max='100'}); });
 
     const defaults = {
       ref: 52.2,
@@ -335,84 +335,47 @@
     }
 
     const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+    function getPops(){ return popInputs.map(el => parseFloat(el.value)); }
 
-    let lastAlloc = [
-      parseFloat(document.getElementById('alloc-0').value),
-      parseFloat(document.getElementById('alloc-1').value),
-      parseFloat(document.getElementById('alloc-2').value)
-    ];
-
-    function populations(){
-      return popInputs.map(el => parseFloat(el.value));
-    }
-
+    // Redistribution with PARITY = pro‑rata to population for the *other two*
     function redistribute(indexChanged, newVal){
       const cur = allocInputs.map(el => parseFloat(el.value));
-      const olds = lastAlloc.slice();
-      let delta = newVal - olds[indexChanged]; // + increase, - decrease
-      if (Math.abs(delta) < 1e-9) return;
+      const mode = gapModeSelect.value;
+      const ps = getPops();
 
-      const idxOthers = [0,1,2].filter(i => i !== indexChanged);
-      const pops = populations();
-
-      function distribute(amount, mode){
-        let remaining = Math.abs(amount);
-        let active = idxOthers.slice();
-        let weights = {};
-        active.forEach(i => { weights[i] = pops[i]; });
-        function sumWeights(indices){
-          let s = indices.reduce((a,i)=> a + (isFinite(weights[i]) && weights[i] > 0 ? weights[i] : 0), 0);
-          if (s <= 0) {
-            indices.forEach(i => { weights[i] = 1; });
-            s = indices.length;
-          }
-          return s;
-        }
-        while (remaining > 1e-6 && active.length){
-          const sumW = sumWeights(active);
-          let newActive = [];
-          for (const i of active){
-            const w = weights[i];
-            const share = remaining * (w / sumW);
-            let cap, applied;
-            if (mode === 'add'){
-              cap = 100 - cur[i];
-              applied = Math.min(share, cap);
-              cur[i] = clamp(cur[i] + applied, 0, 100);
-            } else {
-              cap = cur[i];
-              applied = Math.min(share, cap);
-              cur[i] = clamp(cur[i] - applied, 0, 100);
-            }
-            remaining -= applied;
-            const stillCap = (mode === 'add') ? ( (100 - cur[i]) > 1e-6 ) : ( cur[i] > 1e-6 );
-            if (stillCap) newActive.push(i);
-          }
-          active = newActive;
-        }
-        return remaining;
-      }
-
-      if (delta < 0){
-        const leftover = distribute(delta, 'add');
-        if (leftover < -1e-6) newVal += -leftover;
-      } else {
-        const leftover = distribute(delta, 'remove');
-        if (leftover > 1e-6) newVal -= leftover;
-      }
-
+      // Always honor full 0–100 for the changed slider
       cur[indexChanged] = clamp(newVal, 0, 100);
 
-      const total = cur[0] + cur[1] + cur[2];
-      if (Math.abs(total - 100) > 0.01){
-        const maxIdx = cur.indexOf(Math.max(...cur));
-        cur[maxIdx] += (100 - total);
+      if (mode === 'parity'){
+        const others = [0,1,2].filter(i => i !== indexChanged);
+        const remaining = clamp(100 - cur[indexChanged], 0, 100);
+        const sumPopOthers = ps[others[0]] + ps[others[1]];
+        if (sumPopOthers > 0){
+          cur[others[0]] = remaining * (ps[others[0]] / sumPopOthers);
+          cur[others[1]] = remaining * (ps[others[1]] / sumPopOthers);
+        } else { cur[others[0]] = remaining/2; cur[others[1]] = remaining/2; }
+      } else {
+        // Baseline: take/give from the others to keep total 100
+        const others = [0,1,2].filter(i => i !== indexChanged);
+        let rest = 100 - cur[indexChanged];
+        // Split remaining across others preserving their ratio to previous sum
+        const prevSum = allocInputs[others[0]].valueAsNumber + allocInputs[others[1]].valueAsNumber;
+        if (prevSum > 0){
+          cur[others[0]] = rest * (allocInputs[others[0]].valueAsNumber / prevSum);
+          cur[others[1]] = rest * (allocInputs[others[1]].valueAsNumber / prevSum);
+        } else { cur[others[0]] = rest/2; cur[others[1]] = rest/2; }
       }
 
+      // Write back (and fix rounding diff)
+      const total = cur[0] + cur[1] + cur[2];
+      const diff = 100 - total;
+      if (Math.abs(diff) > 1e-6){
+        const idx = cur.indexOf(Math.max(...cur));
+        cur[idx] = clamp(cur[idx] + diff, 0, 100);
+      }
       for (let i=0;i<3;i++){
         allocInputs[i].value = cur[i];
         allocVals[i].textContent = Math.round(cur[i]);
-        lastAlloc[i] = cur[i];
       }
     }
 
@@ -429,7 +392,7 @@
 
     [0,1,2].forEach(i => {
       allocInputs[i].addEventListener('input', () => {
-        const newVal = parseFloat(allocInputs[i].value);
+        const newVal = allocInputs[i].valueAsNumber;
         redistribute(i, newVal);
         draw();
       });
@@ -441,9 +404,12 @@
       document.getElementById('ref').value = defaults.ref;
       document.getElementById('ref-val').textContent = defaults.ref.toFixed(1);
       gapModeSelect.value = defaults.gapMode;
-      popInputs.forEach((el, i) => { el.value = defaults.pops[i]; popVals[i].textContent = defaults.pops[i].toFixed(1); });
-      allocInputs.forEach((el, i) => { el.value = defaults.allocs[i]; allocVals[i].textContent = Math.round(defaults.allocs[i]); });
-      lastAlloc = defaults.allocs.slice();
+      ['pop','alloc'].forEach(kind=>{
+        [0,1,2].forEach(i=>{
+          document.getElementById(kind+'-'+i).value = defaults[kind+'s'][i];
+          document.getElementById(kind+'-val-'+i).textContent = (kind==='pop' ? defaults.pops[i].toFixed(1) : Math.round(defaults.allocs[i]));
+        });
+      });
       draw();
     });
 
@@ -451,6 +417,7 @@
   </script>
 </body>
 </html>
+
 
 
 
