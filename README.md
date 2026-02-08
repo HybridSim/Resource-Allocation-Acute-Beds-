@@ -1,6 +1,6 @@
 # License
 
-**Copyright (c) 2025 Hybrid Simulation Modelling Lab (HSML)**  
+**Copyright(c) 2025 Hybrid Simulation Modelling Lab (HSML)**  
 
 All rights reserved.  
 
